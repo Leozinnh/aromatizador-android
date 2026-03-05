@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:location/location.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 void main() {
   runApp(const MyApp());
@@ -137,7 +138,115 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    // Solicita MTU maior para suportar payload da configuração (~50 bytes)
+    try {
+      if (Platform.isAndroid) await device!.requestMtu(512);
+    } catch (_) {}
+
+    // Habilita notificações do TX characteristic
+    if (txCharacteristic != null) {
+      await txCharacteristic!.setNotifyValue(true);
+    }
+
     setState(() => isConnected = true);
+  }
+
+  /// Solicita a configuração atual do dispositivo via BLE (comando "GC")
+  Future<void> requestConfig() async {
+    if (!isConnected || rxCharacteristic == null || txCharacteristic == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não conectado ao dispositivo.')),
+      );
+      return;
+    }
+    try {
+      final completer = Completer<String>();
+      late StreamSubscription sub;
+      sub = txCharacteristic!.onValueReceived.listen((value) {
+        if (value.isNotEmpty) {
+          completer.complete(utf8.decode(value));
+          sub.cancel();
+        }
+      });
+
+      await rxCharacteristic!.write(utf8.encode('GC'), withoutResponse: false);
+
+      final response = await completer.future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          sub.cancel();
+          return '';
+        },
+      );
+
+      if (response.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sem resposta do dispositivo.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      _parseAndApplyConfig(response);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Configuração carregada com sucesso!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao ler configuração: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Aplica os dados recebidos do ESP32 nos campos do formulário
+  void _parseAndApplyConfig(String response) {
+    final regex = RegExp(
+      r'GET /4,(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),',
+    );
+    final match = regex.firstMatch(response);
+    if (match == null) {
+      print('Resposta não reconhecida: $response');
+      return;
+    }
+    setState(() {
+      final tOper = int.parse(match.group(1)!);
+      interval = int.parse(match.group(2)!);
+      sprayDuration = int.parse(match.group(3)!);
+      startTime = TimeOfDay(
+        hour: int.parse(match.group(4)!),
+        minute: int.parse(match.group(5)!),
+      );
+      endTime = TimeOfDay(
+        hour: int.parse(match.group(6)!),
+        minute: int.parse(match.group(7)!),
+      );
+      weekendStartTime = TimeOfDay(
+        hour: int.parse(match.group(8)!),
+        minute: int.parse(match.group(9)!),
+      );
+      weekendEndTime = TimeOfDay(
+        hour: int.parse(match.group(10)!),
+        minute: int.parse(match.group(11)!),
+      );
+      for (int i = 0; i < 7; i++) {
+        weekDays[i] = (tOper & (1 << i)) != 0;
+      }
+    });
   }
 
   Future<void> sendConfig() async {
@@ -534,6 +643,28 @@ class _HomePageState extends State<HomePage> {
                           backgroundColor: isConnected
                               ? Colors.blue
                               : Colors.grey,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: isConnected ? requestConfig : null,
+                        icon: const Icon(Icons.download_rounded),
+                        label: const Text('Ver Configuração'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          textStyle: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          backgroundColor:
+                              isConnected ? Colors.orange : Colors.grey,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
