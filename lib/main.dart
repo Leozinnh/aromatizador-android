@@ -58,6 +58,7 @@ class _HomePageState extends State<HomePage> {
   int interval = 300; // 5 minutos em segundos
   int sprayDuration = 15; // segundos
   List<bool> weekDays = List.generate(7, (index) => true);
+  final TextEditingController _descricaoController = TextEditingController();
 
   final List<String> diasSemana = [
     'Dom',
@@ -249,6 +250,11 @@ class _HomePageState extends State<HomePage> {
         weekDays[i] = (tOper & (1 << i)) != 0;
       }
     });
+    // Extrai descrição após '|'
+    final pipeIdx = response.indexOf('|');
+    if (pipeIdx >= 0) {
+      _descricaoController.text = response.substring(pipeIdx + 1).trim();
+    }
   }
 
   Future<void> sendConfig() async {
@@ -266,7 +272,7 @@ class _HomePageState extends State<HomePage> {
     // Configuração com horários separados para dias úteis e final de semana
     // Formato: GET /4,daysMask,interval,sprayDuration,weekdayStartH,weekdayStartM,weekdayEndH,weekdayEndM,weekendStartH,weekendStartM,weekendEndH,weekendEndM,
     String config =
-        'GET /4,$daysMask,$interval,$sprayDuration,${startTime.hour},${startTime.minute},${endTime.hour},${endTime.minute},${weekendStartTime.hour},${weekendStartTime.minute},${weekendEndTime.hour},${weekendEndTime.minute},';
+        'GET /4,$daysMask,$interval,$sprayDuration,${startTime.hour},${startTime.minute},${endTime.hour},${endTime.minute},${weekendStartTime.hour},${weekendStartTime.minute},${weekendEndTime.hour},${weekendEndTime.minute},|${_descricaoController.text.trim()}';
 
     print('Enviando: $config');
 
@@ -485,7 +491,8 @@ class _HomePageState extends State<HomePage> {
         '• Intervalo entre sprays: ${interval}s\n'
         '• Duração do spray: ${sprayDuration}s\n'
         '• Horário dias úteis: ${fmt(startTime)} até ${fmt(endTime)}\n'
-        '• Horário fim de semana: ${fmt(weekendStartTime)} até ${fmt(weekendEndTime)}';
+        '• Horário fim de semana: ${fmt(weekendStartTime)} até ${fmt(weekendEndTime)}\n'
+        '• Descrição: ${_descricaoController.text.trim().isEmpty ? '(sem descrição)' : _descricaoController.text.trim()}';
 
     // 4. Abre WhatsApp
     final encoded = Uri.encodeComponent(msg);
@@ -513,6 +520,12 @@ class _HomePageState extends State<HomePage> {
       rxCharacteristic = null;
       setState(() => isConnected = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _descricaoController.dispose();
+    super.dispose();
   }
 
   @override
@@ -699,6 +712,30 @@ class _HomePageState extends State<HomePage> {
                             onTap: _showDurationDialog,
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Campo de descrição/observação
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Descrição / Observação',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _descricaoController,
+                      maxLines: 4,
+                      maxLength: 100,
+                      decoration: InputDecoration(
+                        hintText: 'Ex: Recepção principal, sala de espera...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        contentPadding: const EdgeInsets.all(12),
                       ),
                     ),
                     const SizedBox(height: 32),
