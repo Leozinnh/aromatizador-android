@@ -155,8 +155,8 @@ class _HomePageState extends State<HomePage> {
 
     setState(() => isConnected = true);
 
-    // Aguarda 3s e carrega configuração automaticamente
-    await Future.delayed(const Duration(seconds: 3));
+    // Aguarda 2s e carrega configuração automaticamente
+    await Future.delayed(const Duration(seconds: 2));
     if (mounted && isConnected) {
       await requestConfig();
     }
@@ -558,7 +558,10 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: Center(
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Center(
         child: Stack(
           children: [
             SingleChildScrollView(
@@ -970,7 +973,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Desenvolvido por Leonardo Alves v1.6.0',
+                                    'Desenvolvido por Leonardo Alves',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.white60,
@@ -991,6 +994,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+      ), // GestureDetector
       floatingActionButton: FloatingActionButton(
         onPressed: _enviarWhatsApp,
         backgroundColor: const Color(0xFF25D366),
