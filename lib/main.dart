@@ -108,7 +108,9 @@ class _HomePageState extends State<HomePage> {
       // Escuta resultados
       FlutterBluePlus.scanResults.listen((results) {
         for (ScanResult r in results) {
-          if (r.device.platformName == 'HomeLoft') {
+          if (r.device.platformName == 'Aromatizador' ||
+              r.device.platformName == 'HomeLoft' ||
+              r.device.platformName == 'Aromy') {
             FlutterBluePlus.stopScan();
             connectToDevice(r.device);
             break;
@@ -152,6 +154,12 @@ class _HomePageState extends State<HomePage> {
     }
 
     setState(() => isConnected = true);
+
+    // Aguarda 3s e carrega configuração automaticamente
+    await Future.delayed(const Duration(seconds: 3));
+    if (mounted && isConnected) {
+      await requestConfig();
+    }
   }
 
   /// Solicita a configuração atual do dispositivo via BLE (comando "GC")
@@ -485,7 +493,7 @@ class _HomePageState extends State<HomePage> {
         '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
     final msg =
-        'Olá! Preciso de ajuda com meu aromatizador HomeLoft.\n\n'
+        'Olá! Preciso de ajuda com meu aromatizador Aromy.\n\n'
         '*Configurações atuais:*\n'
         '• Dias ativos: $diasTexto\n'
         '• Intervalo entre sprays: ${interval}s\n'
