@@ -938,7 +938,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Desenvolvido por Leonardo Alves v1.6.0',
+                                    'Desenvolvido por Leonardo Alves',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.white60,
