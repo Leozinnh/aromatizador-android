@@ -492,6 +492,8 @@ class _HomePageState extends State<HomePage> {
     String fmt(TimeOfDay t) =>
         '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
+    final numero = '553194287161';
+
     final msg =
         'Olá! Preciso de ajuda com meu aromatizador Aromy.\n\n'
         '*Configurações atuais:*\n'
@@ -504,7 +506,7 @@ class _HomePageState extends State<HomePage> {
 
     // 4. Abre WhatsApp
     final encoded = Uri.encodeComponent(msg);
-    final url = Uri.parse('https://wa.me/?text=$encoded');
+    final url = Uri.parse('https://wa.me/${numero}?text=$encoded');
 
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
