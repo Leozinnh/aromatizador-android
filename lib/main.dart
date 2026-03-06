@@ -433,6 +433,15 @@ class _HomePageState extends State<HomePage> {
 
   /// Sincroniza horário, busca configuração atual e abre WhatsApp com mensagem de suporte
   Future<void> _enviarWhatsApp() async {
+    if (!isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Conecte ao dispositivo antes de enviar o suporte.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     // Mostra carregando
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -456,30 +465,8 @@ class _HomePageState extends State<HomePage> {
     // 1. Sincroniza horário (silencioso)
     await sendCurrentTimeQuiet();
 
-    // 2. Busca configuração atual do dispositivo (se conectado)
-    if (isConnected) {
-      try {
-        final completer = Completer<String>();
-        late StreamSubscription sub;
-        sub = txCharacteristic!.onValueReceived.listen((value) {
-          if (value.isNotEmpty) {
-            completer.complete(utf8.decode(value));
-            sub.cancel();
-          }
-        });
-        await rxCharacteristic!.write(utf8.encode('GC'), withoutResponse: false);
-        final response = await completer.future.timeout(
-          const Duration(seconds: 5),
-          onTimeout: () {
-            sub.cancel();
-            return '';
-          },
-        );
-        if (response.isNotEmpty) {
-          _parseAndApplyConfig(response);
-        }
-      } catch (_) {}
-    }
+    // 2. Carrega configuração atual do dispositivo (equivalente ao botão "Carregar Configuração")
+    await requestConfig();
 
     // 3. Monta texto com dias ativos
     final diasAtivos = <String>[];
@@ -938,7 +925,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Desenvolvido por Leonardo Alves',
+                                    'Desenvolvido por Leonardo Alves v1.6.0',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.white60,
