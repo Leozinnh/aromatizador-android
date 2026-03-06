@@ -155,10 +155,11 @@ class _HomePageState extends State<HomePage> {
 
     setState(() => isConnected = true);
 
-    // Aguarda 2s e carrega configuração automaticamente
+    // Aguarda 2s e carrega configuração automaticamente e sincroniza horario
     await Future.delayed(const Duration(seconds: 2));
     if (mounted && isConnected) {
       await requestConfig();
+      await sendCurrentTimeQuiet();
     }
   }
 
