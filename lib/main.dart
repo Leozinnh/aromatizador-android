@@ -5,6 +5,8 @@ import 'package:location/location.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -429,6 +431,91 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Sincroniza horário, busca configuração atual e abre WhatsApp com mensagem de suporte
+  Future<void> _enviarWhatsApp() async {
+    // Mostra carregando
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 12),
+              Text('Preparando mensagem de suporte...'),
+            ],
+          ),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+
+    // 1. Sincroniza horário (silencioso)
+    await sendCurrentTimeQuiet();
+
+    // 2. Busca configuração atual do dispositivo (se conectado)
+    if (isConnected) {
+      try {
+        final completer = Completer<String>();
+        late StreamSubscription sub;
+        sub = txCharacteristic!.onValueReceived.listen((value) {
+          if (value.isNotEmpty) {
+            completer.complete(utf8.decode(value));
+            sub.cancel();
+          }
+        });
+        await rxCharacteristic!.write(utf8.encode('GC'), withoutResponse: false);
+        final response = await completer.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            sub.cancel();
+            return '';
+          },
+        );
+        if (response.isNotEmpty) {
+          _parseAndApplyConfig(response);
+        }
+      } catch (_) {}
+    }
+
+    // 3. Monta texto com dias ativos
+    final diasAtivos = <String>[];
+    for (int i = 0; i < 7; i++) {
+      if (weekDays[i]) diasAtivos.add(diasSemana[i]);
+    }
+    final diasTexto = diasAtivos.isEmpty ? 'Nenhum' : diasAtivos.join(', ');
+
+    String fmt(TimeOfDay t) =>
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+    final msg =
+        'Olá! Preciso de ajuda com meu aromatizador HomeLoft.\n\n'
+        '*Configurações atuais:*\n'
+        '• Dias ativos: $diasTexto\n'
+        '• Intervalo entre sprays: ${interval}s\n'
+        '• Duração do spray: ${sprayDuration}s\n'
+        '• Horário dias úteis: ${fmt(startTime)} até ${fmt(endTime)}\n'
+        '• Horário fim de semana: ${fmt(weekendStartTime)} até ${fmt(weekendEndTime)}';
+
+    // 4. Abre WhatsApp
+    final encoded = Uri.encodeComponent(msg);
+    final url = Uri.parse('https://wa.me/?text=$encoded');
+
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível abrir o WhatsApp.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> disconnectDevice() async {
     if (device != null) {
       try {
@@ -656,7 +743,7 @@ class _HomePageState extends State<HomePage> {
                       child: ElevatedButton.icon(
                         onPressed: isConnected ? requestConfig : null,
                         icon: const Icon(Icons.download_rounded),
-                        label: const Text('Ver Configuração'),
+                        label: const Text('Carregar Configuração'),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           textStyle: const TextStyle(
@@ -803,7 +890,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                '© 2025 ESSENCIAS E AROMY',
+                                '© 2026 ESSENCIAS E AROMY',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 16,
@@ -851,7 +938,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Desenvolvido por Leonardo Alves',
+                                    'Desenvolvido por Leonardo Alves v1.6.0',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.white60,
@@ -871,6 +958,12 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _enviarWhatsApp,
+        backgroundColor: const Color(0xFF25D366),
+        tooltip: 'Suporte via WhatsApp',
+        child: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white),
       ),
     );
   }
