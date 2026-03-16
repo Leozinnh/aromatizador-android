@@ -164,7 +164,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Solicita a configuração atual do dispositivo via BLE (comando "GC")
-  Future<void> requestConfig() async {
+  Future<void> requestConfig({bool showModal = false}) async {
     if (!isConnected || rxCharacteristic == null || txCharacteristic == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Não conectado ao dispositivo.')),
@@ -206,6 +206,9 @@ class _HomePageState extends State<HomePage> {
       _parseAndApplyConfig(response);
 
       if (context.mounted) {
+        if (showModal) {
+          _showLoadedConfigModal();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Configuração carregada com sucesso!'),
@@ -444,6 +447,135 @@ class _HomePageState extends State<HomePage> {
         );
       },
     );
+  }
+
+  void _showLoadedConfigModal() {
+    final diasAtivos = <String>[];
+    for (int i = 0; i < 7; i++) {
+      if (weekDays[i]) diasAtivos.add(diasSemana[i]);
+    }
+    final diasTexto = diasAtivos.isEmpty ? 'Nenhum' : diasAtivos.join(', ');
+
+    String fmt(TimeOfDay t) =>
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+    final descricao = _descricaoController.text.trim();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.download_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Configuração Carregada'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (descricao.isNotEmpty) ...([
+                Text(
+                  'Descrição:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(descricao, style: const TextStyle(fontSize: 15)),
+                const SizedBox(height: 12),
+                const Divider(),
+                const SizedBox(height: 6),
+              ]),
+              _buildConfigItem(Icons.calendar_today, 'Dias ativos', diasTexto),
+              _buildConfigItem(Icons.timer, 'Intervalo entre sprays', '${interval}s'),
+              _buildConfigItem(Icons.air, 'Duração do spray', '${sprayDuration}s'),
+              _buildConfigItem(Icons.access_time, 'Início dias úteis', fmt(startTime)),
+              _buildConfigItem(Icons.access_time_filled, 'Fim dias úteis', fmt(endTime)),
+              _buildConfigItem(Icons.weekend, 'Início fim de semana', fmt(weekendStartTime)),
+              _buildConfigItem(Icons.event_available, 'Fim fim de semana', fmt(weekendEndTime)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fechar'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _abrirWhatsAppConfig();
+            },
+            icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 18),
+            label: const Text('Abrir WhatsApp'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF25D366),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfigItem(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.blueGrey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(value, style: const TextStyle(color: Colors.black87)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _abrirWhatsAppConfig() async {
+    final diasAtivos = <String>[];
+    for (int i = 0; i < 7; i++) {
+      if (weekDays[i]) diasAtivos.add(diasSemana[i]);
+    }
+    final diasTexto = diasAtivos.isEmpty ? 'Nenhum' : diasAtivos.join(', ');
+
+    String fmt(TimeOfDay t) =>
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+    final descricao = _descricaoController.text.trim();
+
+    final msg =
+        'Olá! Segue as configurações do meu aromatizador Aromy.\n\n'
+        '*Configurações:*\n'
+        '• Dias ativos: $diasTexto\n'
+        '• Intervalo entre sprays: ${interval}s\n'
+        '• Duração do spray: ${sprayDuration}s\n'
+        '• Horário dias úteis: ${fmt(startTime)} até ${fmt(endTime)}\n'
+        '• Horário fim de semana: ${fmt(weekendStartTime)} até ${fmt(weekendEndTime)}\n'
+        '• Descrição: ${descricao.isEmpty ? '(sem descrição)' : descricao}';
+
+    final encoded = Uri.encodeComponent(msg);
+    final url = Uri.parse('https://wa.me/?text=\$encoded');
+
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível abrir o WhatsApp.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   /// Sincroniza horário, busca configuração atual e abre WhatsApp com mensagem de suporte
@@ -728,30 +860,6 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    // Campo de descrição/observação
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Descrição / Observação',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _descricaoController,
-                      maxLines: 4,
-                      maxLength: 100,
-                      decoration: InputDecoration(
-                        hintText: 'Ex: Recepção principal, sala de espera...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        contentPadding: const EdgeInsets.all(12),
-                      ),
-                    ),
                     const SizedBox(height: 32),
                     SizedBox(
                       width: double.infinity,
@@ -779,7 +887,7 @@ class _HomePageState extends State<HomePage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: isConnected ? requestConfig : null,
+                        onPressed: isConnected ? () => requestConfig(showModal: true) : null,
                         icon: const Icon(Icons.download_rounded),
                         label: const Text('Carregar Configuração'),
                         style: ElevatedButton.styleFrom(
