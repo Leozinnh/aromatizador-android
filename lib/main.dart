@@ -564,7 +564,7 @@ class _HomePageState extends State<HomePage> {
         '• Descrição: ${descricao.isEmpty ? '(sem descrição)' : descricao}';
 
     final encoded = Uri.encodeComponent(msg);
-    final url = Uri.parse('https://wa.me/?text=\$encoded');
+    final url = Uri.parse('https://wa.me/?text=$encoded');
 
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
