@@ -46,10 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Need BLE permission</string>
+	<string>Este aplicativo usa Bluetooth para se comunicar com o aromatizador Aromy via BLE, permitindo enviar e receber configurações de horário, intervalo e duração de spray diretamente ao dispositivo.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Need BLE permission</string>
+	<string>Este aplicativo usa Bluetooth para conectar e configurar o aromatizador Aromy. Por exemplo, ao tocar em "Salvar Configuração", o app envia os horários e intervalos de funcionamento ao dispositivo via Bluetooth Low Energy (BLE).</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Need Location permission</string>
+	<string>A localização é necessária para que o Bluetooth Low Energy funcione corretamente no iOS, conforme exigência do sistema operacional. Nenhum dado de localização é coletado ou armazenado pelo aplicativo.</string>
 </dict>
 </plist>
