@@ -480,7 +480,10 @@ class _HomePageState extends State<HomePage> {
             Text('Configuração Carregada'),
           ],
         ),
-        content: SizedBox(
+        content: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
             child: Column(
@@ -522,6 +525,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+        ),
         ),
         actions: [
           TextButton(
