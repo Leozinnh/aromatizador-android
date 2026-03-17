@@ -461,6 +461,18 @@ class _HomePageState extends State<HomePage> {
 
     final descricao = _descricaoController.text.trim();
 
+    final msgInicial =
+        'Olá! Segue as configurações do meu aromatizador Aromy.\n\n'
+        '*Configurações:*\n'
+        '• Dias ativos: $diasTexto\n'
+        '• Intervalo entre sprays: ${interval}s\n'
+        '• Duração do spray: ${sprayDuration}s\n'
+        '• Horário dias úteis: ${fmt(startTime)} até ${fmt(endTime)}\n'
+        '• Horário fim de semana: ${fmt(weekendStartTime)} até ${fmt(weekendEndTime)}\n'
+        '• Descrição: ${descricao.isEmpty ? '(sem descrição)' : descricao}';
+
+    final msgController = TextEditingController(text: msgInicial);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -471,33 +483,59 @@ class _HomePageState extends State<HomePage> {
             Text('Configuração Carregada'),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (descricao.isNotEmpty) ...([
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (descricao.isNotEmpty) ...([
+                  Text(
+                    'Descrição:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(descricao, style: const TextStyle(fontSize: 15)),
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 6),
+                ]),
+                _buildConfigItem(Icons.calendar_today, 'Dias ativos', diasTexto),
+                _buildConfigItem(Icons.timer, 'Intervalo entre sprays', '${interval}s'),
+                _buildConfigItem(Icons.air, 'Duração do spray', '${sprayDuration}s'),
+                _buildConfigItem(Icons.access_time, 'Início dias úteis', fmt(startTime)),
+                _buildConfigItem(Icons.access_time_filled, 'Fim dias úteis', fmt(endTime)),
+                _buildConfigItem(Icons.weekend, 'Início fim de semana', fmt(weekendStartTime)),
+                _buildConfigItem(Icons.event_available, 'Fim fim de semana', fmt(weekendEndTime)),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
                 Text(
-                  'Descrição:',
+                  'Mensagem para o WhatsApp:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.grey.shade700,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(descricao, style: const TextStyle(fontSize: 15)),
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 6),
-              ]),
-              _buildConfigItem(Icons.calendar_today, 'Dias ativos', diasTexto),
-              _buildConfigItem(Icons.timer, 'Intervalo entre sprays', '${interval}s'),
-              _buildConfigItem(Icons.air, 'Duração do spray', '${sprayDuration}s'),
-              _buildConfigItem(Icons.access_time, 'Início dias úteis', fmt(startTime)),
-              _buildConfigItem(Icons.access_time_filled, 'Fim dias úteis', fmt(endTime)),
-              _buildConfigItem(Icons.weekend, 'Início fim de semana', fmt(weekendStartTime)),
-              _buildConfigItem(Icons.event_available, 'Fim fim de semana', fmt(weekendEndTime)),
-            ],
+                const SizedBox(height: 8),
+                TextField(
+                  controller: msgController,
+                  maxLines: 8,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.all(10),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         actions: [
@@ -507,8 +545,20 @@ class _HomePageState extends State<HomePage> {
           ),
           ElevatedButton.icon(
             onPressed: () async {
+              final textoFinal = msgController.text;
               Navigator.pop(ctx);
-              await _abrirWhatsAppConfig();
+              final encoded = Uri.encodeComponent(textoFinal);
+              final url = Uri.parse('https://wa.me/?text=$encoded');
+              if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Não foi possível abrir o WhatsApp.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 18),
             label: const Text('Abrir WhatsApp'),
