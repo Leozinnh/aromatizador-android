@@ -471,8 +471,6 @@ class _HomePageState extends State<HomePage> {
           '• Descrição: ${desc.isEmpty ? '(sem descrição)' : desc}';
     }
 
-    final msgController = TextEditingController(text: buildMsg());
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -512,31 +510,8 @@ class _HomePageState extends State<HomePage> {
                   controller: _descricaoController,
                   maxLines: 3,
                   maxLength: 100,
-                  onChanged: (_) => msgController.text = buildMsg(),
                   decoration: InputDecoration(
                     hintText: 'Ex: Recepção principal, sala de espera...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    contentPadding: const EdgeInsets.all(10),
-                  ),
-                ),
-                const Divider(),
-                const SizedBox(height: 8),
-                Text(
-                  'Mensagem para o WhatsApp:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: msgController,
-                  maxLines: 8,
-                  decoration: InputDecoration(
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -568,9 +543,8 @@ class _HomePageState extends State<HomePage> {
           ),
           ElevatedButton.icon(
             onPressed: () async {
-              final textoFinal = msgController.text;
               Navigator.pop(ctx);
-              final encoded = Uri.encodeComponent(textoFinal);
+              final encoded = Uri.encodeComponent(buildMsg());
               final url = Uri.parse('https://wa.me/?text=$encoded');
               if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
                 if (context.mounted) {
@@ -1202,8 +1176,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
   @override
   void initState() {
     super.initState();
-    FlutterBluePlus.stopScan(); // <-- Garante que não há scan antigo
-    FlutterBluePlus.startScan(timeout: Duration(seconds: 4));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await pedirPermissoesBluetooth(context);
+      FlutterBluePlus.stopScan();
+      FlutterBluePlus.startScan(timeout: Duration(seconds: 4));
+    });
   }
 
   @override
