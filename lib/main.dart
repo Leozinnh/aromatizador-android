@@ -459,19 +459,19 @@ class _HomePageState extends State<HomePage> {
     String fmt(TimeOfDay t) =>
         '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-    final descricao = _descricaoController.text.trim();
+    String buildMsg() {
+      final desc = _descricaoController.text.trim();
+      return 'Olá! Segue as configurações do meu aromatizador Aromy.\n\n'
+          '*Configurações:*\n'
+          '• Dias ativos: $diasTexto\n'
+          '• Intervalo entre sprays: ${interval}s\n'
+          '• Duração do spray: ${sprayDuration}s\n'
+          '• Horário dias úteis: ${fmt(startTime)} até ${fmt(endTime)}\n'
+          '• Horário fim de semana: ${fmt(weekendStartTime)} até ${fmt(weekendEndTime)}\n'
+          '• Descrição: ${desc.isEmpty ? '(sem descrição)' : desc}';
+    }
 
-    final msgInicial =
-        'Olá! Segue as configurações do meu aromatizador Aromy.\n\n'
-        '*Configurações:*\n'
-        '• Dias ativos: $diasTexto\n'
-        '• Intervalo entre sprays: ${interval}s\n'
-        '• Duração do spray: ${sprayDuration}s\n'
-        '• Horário dias úteis: ${fmt(startTime)} até ${fmt(endTime)}\n'
-        '• Horário fim de semana: ${fmt(weekendStartTime)} até ${fmt(weekendEndTime)}\n'
-        '• Descrição: ${descricao.isEmpty ? '(sem descrição)' : descricao}';
-
-    final msgController = TextEditingController(text: msgInicial);
+    final msgController = TextEditingController(text: buildMsg());
 
     showDialog(
       context: context,
@@ -490,20 +490,6 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (descricao.isNotEmpty) ...([
-                  Text(
-                    'Descrição:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(descricao, style: const TextStyle(fontSize: 15)),
-                  const SizedBox(height: 12),
-                  const Divider(),
-                  const SizedBox(height: 6),
-                ]),
                 _buildConfigItem(Icons.calendar_today, 'Dias ativos', diasTexto),
                 _buildConfigItem(Icons.timer, 'Intervalo entre sprays', '${interval}s'),
                 _buildConfigItem(Icons.air, 'Duração do spray', '${sprayDuration}s'),
@@ -512,6 +498,31 @@ class _HomePageState extends State<HomePage> {
                 _buildConfigItem(Icons.weekend, 'Início fim de semana', fmt(weekendStartTime)),
                 _buildConfigItem(Icons.event_available, 'Fim fim de semana', fmt(weekendEndTime)),
                 const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                Text(
+                  'Descrição / Observação:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _descricaoController,
+                  maxLines: 3,
+                  maxLength: 100,
+                  onChanged: (_) => msgController.text = buildMsg(),
+                  decoration: InputDecoration(
+                    hintText: 'Ex: Recepção principal, sala de espera...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.all(10),
+                  ),
+                ),
                 const Divider(),
                 const SizedBox(height: 8),
                 Text(
@@ -545,6 +556,18 @@ class _HomePageState extends State<HomePage> {
           ),
           ElevatedButton.icon(
             onPressed: () async {
+              Navigator.pop(ctx);
+              await sendConfig();
+            },
+            icon: const Icon(Icons.save, size: 18),
+            label: const Text('Salvar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
               final textoFinal = msgController.text;
               Navigator.pop(ctx);
               final encoded = Uri.encodeComponent(textoFinal);
@@ -561,7 +584,7 @@ class _HomePageState extends State<HomePage> {
               }
             },
             icon: const FaIcon(FontAwesomeIcons.whatsapp, size: 18),
-            label: const Text('Abrir WhatsApp'),
+            label: const Text('WhatsApp'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF25D366),
               foregroundColor: Colors.white,
