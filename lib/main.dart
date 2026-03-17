@@ -461,8 +461,7 @@ class _HomePageState extends State<HomePage> {
 
     String buildMsg() {
       final desc = _descricaoController.text.trim();
-      return 'Olá! Segue as configurações do meu aromatizador Aromy.\n\n'
-          '*Configurações:*\n'
+      return '*Configurações:*\n'
           '• Dias ativos: $diasTexto\n'
           '• Intervalo entre sprays: ${interval}s\n'
           '• Duração do spray: ${sprayDuration}s\n'
@@ -1130,12 +1129,20 @@ class _HomePageState extends State<HomePage> {
                                     size: 16,
                                   ),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    'Desenvolvido por Leonardo Alves',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.white60,
-                                      fontStyle: FontStyle.italic,
+                                  GestureDetector(
+                                    onTap: () => launchUrl(
+                                      Uri.parse('https://leonardo-alves.com/'),
+                                      mode: LaunchMode.externalApplication,
+                                    ),
+                                    child: Text(
+                                      'Desenvolvido por Leonardo Alves',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white60,
+                                        fontStyle: FontStyle.italic,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: Colors.white60,
+                                      ),
                                     ),
                                   ),
                                 ],
